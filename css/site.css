@@ -115,7 +115,7 @@ input[type=range]{width:100%;accent-color:var(--a)}
 @property --bt-gp{syntax:"<percentage>";initial-value:5%;inherits:false}
 @property --bt-gs{syntax:"<color>";initial-value:white;inherits:false}
 .bt-btn{--sb:var(--a);--sh:#ffd29a;--shs:#fff3e0;--dur:3s;isolation:isolate;position:relative;overflow:hidden;border:1px solid transparent!important;
-background:linear-gradient(var(--sb),var(--sb)) padding-box,conic-gradient(from calc(var(--bt-ga) - var(--bt-gao)),transparent,var(--sh) var(--bt-gp),var(--bt-gs) calc(var(--bt-gp)*2),var(--sh) calc(var(--bt-gp)*3),transparent calc(var(--bt-gp)*4)) border-box!important;
+background:linear-gradient(135deg,var(--g1),var(--g2)) padding-box,conic-gradient(from calc(var(--bt-ga) - var(--bt-gao)),transparent,var(--sh) var(--bt-gp),var(--bt-gs) calc(var(--bt-gp)*2),var(--sh) calc(var(--bt-gp)*3),transparent calc(var(--bt-gp)*4)) border-box!important;
 transition:--bt-gao 800ms cubic-bezier(.25,1,.5,1),--bt-gp 800ms cubic-bezier(.25,1,.5,1),--bt-gs 800ms cubic-bezier(.25,1,.5,1)!important;
 animation:bt-ga var(--dur) linear infinite,bt-ga calc(var(--dur)/.4) linear infinite reverse paused;animation-composition:add}
 .bt-btn.bt-call{--sb:var(--c);--sh:#7ee2a2;--shs:#dcfce7}
@@ -135,3 +135,22 @@ animation:bt-ga var(--dur) linear infinite,bt-ga calc(var(--dur)/.4) linear infi
 .bt-btn{--sh:#d8b4fe;--shs:#f5eaff}.bt-btn:not(.bt-call):hover{--sb:#9333ea}
 .bt-btn.bt-call{--sb:#16a34a;--sh:#7ee2a2;--shs:#dcfce7}.bt-btn.bt-call:hover{--sb:#15803d}
 .magic-rings{position:relative;width:100%;height:100%;overflow:hidden}.magic-rings__canvas{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none}
+
+/* purple gradient buttons */
+.bt-btn,.bt-btn.bt-call{--g1:#6b06e3;--g2:#b52cfe;--sh:#e9b8ff;--shs:#fbefff;box-shadow:0 8px 28px -8px rgba(181,44,254,.55);transition:box-shadow .3s,filter .3s}
+.bt-btn:hover,.bt-btn.bt-call:hover,.bt-btn:not(.bt-call):hover{--g1:#7a12f5;--g2:#c34bff;box-shadow:0 10px 36px -6px rgba(181,44,254,.8);filter:saturate(1.1)}
+.bt-btn2{border:1px solid transparent;background:linear-gradient(#0d0826,#0d0826) padding-box,linear-gradient(135deg,#6b06e3,#b52cfe) border-box;transition:box-shadow .3s,background .3s}
+.bt-btn2:hover{background:linear-gradient(135deg,rgba(107,6,227,.35),rgba(181,44,254,.35)) padding-box,linear-gradient(135deg,#6b06e3,#b52cfe) border-box;box-shadow:0 8px 28px -10px rgba(181,44,254,.7)}
+/* lucide icons */
+.ic{flex:none;vertical-align:middle}
+.ibox{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:14px;margin-bottom:14px;color:#e9d5ff;background:linear-gradient(135deg,rgba(107,6,227,.35),rgba(181,44,254,.2));border:1px solid rgba(181,44,254,.35);box-shadow:0 6px 24px -10px rgba(181,44,254,.7)}
+.feat .ic{color:#d8b4fe;display:block;margin:0 auto 8px}
+.price{display:flex;align-items:center;gap:8px}.price .ic{color:#c084fc}
+.chk{list-style:none;padding:0}.chk li{display:flex;gap:8px;align-items:flex-start}.chk li .ic{color:#b52cfe;margin-top:4px}
+.more{display:inline-flex;align-items:center;gap:6px}.more .ic{transition:transform .2s}.more:hover .ic{transform:translateX(3px)}
+.contact-list a,.links a{display:inline-flex;align-items:center;gap:8px}.contact-list .ic,.links .ic{color:#c084fc}
+.faq summary{display:flex;align-items:center;gap:12px}.faq summary span{flex:1}.faq summary .q-ic{color:#c084fc}
+.faq summary .chev{transition:transform .25s;color:#a9a6d6}.faq details[open] summary .chev{transform:rotate(180deg)}
+.faq summary::after{display:none!important}
+.calc-out .ic{color:#c084fc;vertical-align:-3px}
+.faq summary{padding-right:22px}
