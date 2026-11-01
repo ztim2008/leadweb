@@ -172,3 +172,7 @@ animation:bt-ga var(--dur) linear infinite,bt-ga calc(var(--dur)/.4) linear infi
 @media(max-width:760px){.ba{grid-template-columns:1fr;gap:8px}.ba-arr{transform:rotate(90deg)}}
 .av-steps li .ibox{margin-bottom:10px}
 a.dir-link{text-decoration:none;color:inherit;display:block;transition:transform .25s,border-color .25s}a.dir-link:hover{transform:translateY(-3px);border-color:rgba(181,44,254,.6)}
+.hl-card{grid-column:1/-1;display:flex;gap:22px;align-items:flex-start;background:linear-gradient(135deg,rgba(107,6,227,.28),rgba(181,44,254,.14))!important;border-color:rgba(181,44,254,.55)!important}
+.hl-card h3{font-size:24px;margin:.2em 0 .4em}
+@media(max-width:700px){.hl-card{flex-direction:column}}
+.hl-box{border-color:rgba(181,44,254,.55)!important}.hl-line{display:flex;gap:10px;align-items:center;color:#f3e8ff}.hl-line .ic{color:#b52cfe}
