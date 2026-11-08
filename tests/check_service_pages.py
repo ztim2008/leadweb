@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGES = {
     "automation.html": {
         "h1": "Меньше ручной работы.",
-        "cta": ["Обсудить мою задачу", "Обсудить задачу"],
+        "cta": ["Как проходит работа", "Пять шагов"],
         "phrases": [
             "Это обследование рабочих процессов, не финансовый аудит и не проверка бухгалтерской отчётности.",
             "Демонстрационные сценарии, не выполненные клиентские проекты",
@@ -26,7 +26,7 @@ PAGES = {
     },
     "bitrix.html": {
         "h1": "Сайт на 1С-Битрикс",
-        "cta": ["Обсудить сайт", "Обсудить сайт на 1С-Битрикс"],
+        "cta": ["Как проходит работа", "Пять шагов"],
         "phrases": [
             "не Битрикс24",
             "Демонстрационные сценарии, не выполненные клиентские проекты",
@@ -237,9 +237,9 @@ def main():
                 errors += fail(f"{name} unknown local link {path}")
             elif not LOCAL[path].exists():
                 errors += fail(f"{name} missing file for {path}")
-        for contact in ("tel:+79212013252", "tel:+79238240461", "mailto:bilariuss@yandex.ru"):
-            if contact not in doc.hrefs:
-                errors += fail(f"{name} missing {contact}")
+        for contact in ("tel:", "mailto:", "max.ru", "t.me/"):
+            if contact in raw:
+                errors += fail(f"{name} still has contact marker {contact}")
         other = "/leadweb/bitrix.html" if name == "automation.html" else "/leadweb/automation.html"
         if other not in [h.split("#")[0] for h in doc.hrefs]:
             errors += fail(f"{name} does not link to {other}")
