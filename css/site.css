@@ -182,9 +182,10 @@ a.dir-link{text-decoration:none;color:inherit;display:block;transition:transform
 #studio .w{position:relative;display:flex;flex-direction:column;align-items:center;margin-left:auto;margin-right:auto}
 #studio .stage-wrap{position:relative;width:100%;max-width:960px;margin:0 auto}
 #studio .studio-stage,#studio #studio-stage{width:100%;aspect-ratio:452/308;background:#100a22;border:1px solid var(--line);border-radius:18px;overflow:hidden}
-#studio #studio-stage canvas{image-rendering:pixelated;image-rendering:crisp-edges}
-#studio .labels{position:absolute;inset:0;pointer-events:none}
-#studio .name{position:absolute;transform:translate(-50%,-100%);background:rgba(16,10,34,.88);color:#fff;border:1px solid rgba(196,181,253,.8);border-radius:999px;padding:2px 7px;font-size:12px;line-height:1.3;white-space:nowrap}
+#studio #studio-stage canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#studio .labels{position:absolute;inset:0;pointer-events:none;z-index:2}
+#studio .name{position:absolute;transform:translate(-50%,-100%);background:rgba(16,10,34,.88);color:#fff;border:1px solid rgba(196,181,253,.8);border-radius:999px;padding:2px 7px;font-size:12px;line-height:1.3;white-space:nowrap;opacity:0}
+#studio .studio-caption{margin:12px 0 0;text-align:center;color:var(--muted,#a5a0bd);font-size:14px;line-height:1.45;max-width:42rem}
 #studio .fallback{margin:12px 0 0;text-align:center}
 #studio .studio-sr,#studio .studio-pause{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 #studio .studio-pause{background:transparent;color:#fff;font:inherit;cursor:pointer}
