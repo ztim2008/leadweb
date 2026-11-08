@@ -860,21 +860,206 @@
     wanderCat();
   }
 
-  function drawBubble(ctx, x, y, text) {
-    if (!text) return;
+  var bubbleRect = null;
+  var bubbleLines = null;
+  var BUBBLE_GAP = 6;
+  var BUBBLE_MAX_W = 108;
+
+  function overlapArea(a, b) {
+    var w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+    var h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    if (w <= 0 || h <= 0) return 0;
+    return w * h;
+  }
+
+  function wrapBubbleLines(ctx, text) {
     ctx.font = "bold 10px sans-serif";
-    var w = Math.min(120, ctx.measureText(text).width + 10);
-    var h = 16;
-    var bx = Math.round(x - w / 2);
-    var by = Math.round(y - 58);
+    var maxInner = BUBBLE_MAX_W;
+    var tokens = String(text || "").split(/\s+/).filter(function (part) { return part; });
+    if (!tokens.length) tokens = [""];
+    var pieces = [];
+    for (var t = 0; t < tokens.length; t++) {
+      var word = tokens[t];
+      if (ctx.measureText(word).width <= maxInner) {
+        pieces.push({ text: word, space: true });
+        continue;
+      }
+      var chunk = "";
+      for (var c = 0; c < word.length; c++) {
+        var trial = chunk + word.charAt(c);
+        if (chunk && ctx.measureText(trial).width > maxInner) {
+          pieces.push({ text: chunk, space: false });
+          chunk = word.charAt(c);
+        } else chunk = trial;
+      }
+      if (chunk) pieces.push({ text: chunk, space: true });
+    }
+    var lines = [];
+    var line = "";
+    for (var i = 0; i < pieces.length; i++) {
+      var glue = line && pieces[i - 1].space ? " " : "";
+      var next = line ? line + glue + pieces[i].text : pieces[i].text;
+      if (line && ctx.measureText(next).width > maxInner) {
+        lines.push(line);
+        line = pieces[i].text;
+      } else line = next;
+    }
+    if (line) lines.push(line);
+    var widest = 0;
+    for (var j = 0; j < lines.length; j++) widest = Math.max(widest, ctx.measureText(lines[j]).width);
+    return {
+      lines: lines,
+      w: Math.ceil(widest + 10),
+      h: lines.length * 12 + 6
+    };
+  }
+
+  function layoutBubble(w, h, speaker, obstacles, bounds) {
+    var gap = BUBBLE_GAP;
+    if (w > bounds.w) w = bounds.w;
+    if (h > bounds.h) h = bounds.h;
+    function boxAt(x, y) {
+      var maxX = bounds.x + bounds.w - w;
+      var maxY = bounds.y + bounds.h - h;
+      x = Math.round(x);
+      y = Math.round(y);
+      if (x < bounds.x) x = bounds.x;
+      if (y < bounds.y) y = bounds.y;
+      if (x > maxX) x = Math.floor(maxX);
+      if (y > maxY) y = Math.floor(maxY);
+      return { x: x, y: y, w: w, h: h };
+    }
+    function paddedArea(b) {
+      var area = 0;
+      for (var i = 0; i < obstacles.length; i++) {
+        var o = obstacles[i];
+        area += overlapArea(b, { x: o.x - gap, y: o.y - gap, w: o.w + gap * 2, h: o.h + gap * 2 });
+      }
+      return area;
+    }
+    var preferX = speaker.x - w / 2;
+    var preferY = speaker.top - gap - h;
+    function dist(b) {
+      return Math.abs(b.x - preferX) + Math.abs(b.y - preferY) * 1.4;
+    }
+    var best = null;
+    var bestArea = Infinity;
+    var bestDist = Infinity;
+    function consider(b) {
+      var area = paddedArea(b);
+      var d = dist(b);
+      if (area < bestArea - 0.01 || (Math.abs(area - bestArea) < 0.01 && d < bestDist)) {
+        best = b;
+        bestArea = area;
+        bestDist = d;
+      }
+    }
+    consider(boxAt(preferX, preferY));
+    if (bestArea === 0) return best;
+    var shifts = [0, -20, 20, -40, 40, -64, 64, -88, 88];
+    for (var s = 0; s < shifts.length; s++) {
+      consider(boxAt(preferX + shifts[s], preferY));
+      consider(boxAt(preferX + shifts[s], preferY - 18));
+      consider(boxAt(preferX + shifts[s], speaker.top + gap));
+    }
+    var half = speaker.half || 24;
+    consider(boxAt(speaker.x - half - gap - w, speaker.top - h));
+    consider(boxAt(speaker.x + half + gap, speaker.top - h));
+    consider(boxAt(speaker.x - half - gap - w, speaker.top));
+    consider(boxAt(speaker.x + half + gap, speaker.top));
+    if (bestArea === 0) return best;
+    for (var y = bounds.y; y <= bounds.y + bounds.h - h + 0.01; y += 6) {
+      for (var x = bounds.x; x <= bounds.x + bounds.w - w + 0.01; x += 8) {
+        consider(boxAt(x, y));
+      }
+    }
+    return best;
+  }
+
+  function measuredNameBoxes() {
+    var boxes = [];
+    var cr = canvas && canvas.getBoundingClientRect();
+    if (cr && cr.width > 2 && cr.height > 2) {
+      var sx = WIDTH / cr.width;
+      var sy = HEIGHT / cr.height;
+      for (var i = 0; i < anchors.length; i++) {
+        var a = anchors[i];
+        var el = document.getElementById("label-" + a.id);
+        if (!el || el.style.opacity === "0") continue;
+        var r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) continue;
+        boxes.push({
+          id: a.id,
+          x: (r.left - cr.left) * sx,
+          y: (r.top - cr.top) * sy,
+          w: r.width * sx,
+          h: r.height * sy
+        });
+      }
+      if (boxes.length) return boxes;
+    }
+    for (var j = 0; j < anchors.length; j++) {
+      var an = anchors[j];
+      if (an.id === "robot") continue;
+      var nw = an.id === "cat" ? 36 : an.id === "igor" ? 48 : an.id === "client" ? 56 : 64;
+      var nh = 16;
+      boxes.push({ id: an.id, x: an.x - nw / 2, y: an.y - nh, w: nw, h: nh });
+    }
+    return boxes;
+  }
+
+  function sceneBounds() {
+    return { x: 4, y: 4, w: WIDTH - 8, h: HEIGHT - 8 };
+  }
+
+  function speakerFrom(boxes, who) {
+    for (var i = 0; i < boxes.length; i++) if (boxes[i].id === who) return boxes[i];
+    return null;
+  }
+
+  function placeSpeech(metrics, who, obstacles) {
+    var speakerBox = speakerFrom(obstacles, who);
+    if (!speakerBox) return null;
+    return layoutBubble(metrics.w, metrics.h, {
+      x: speakerBox.x + speakerBox.w / 2,
+      top: speakerBox.y,
+      half: speakerBox.w / 2
+    }, obstacles, sceneBounds());
+  }
+
+  function drawBubbleBox(ctx, box, lines) {
+    ctx.save();
+    ctx.font = "bold 10px sans-serif";
     ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.fillRect(bx, by, w, h);
+    ctx.fillRect(box.x, box.y, box.w, box.h);
     ctx.strokeStyle = "#a78bfa";
-    ctx.strokeRect(bx + 0.5, by + 0.5, w - 1, h - 1);
+    ctx.strokeRect(box.x + 0.5, box.y + 0.5, box.w - 1, box.h - 1);
+    ctx.beginPath();
+    ctx.rect(box.x + 2, box.y + 1, Math.max(0, box.w - 4), Math.max(0, box.h - 2));
+    ctx.clip();
     ctx.fillStyle = "#1e1b4b";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(text, x, by + h / 2 + 0.5);
+    var lineH = 12;
+    var block = lines.length * lineH;
+    var start = box.y + (box.h - block) / 2 + lineH / 2;
+    for (var i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], box.x + box.w / 2, start + i * lineH + 0.5);
+    }
+    ctx.restore();
+  }
+
+  function drawActiveBubble() {
+    bubbleRect = null;
+    bubbleLines = null;
+    if (!bubble || bubble.left <= 0 || !bubble.text || !ctx) return;
+    var metrics = wrapBubbleLines(ctx, bubble.text);
+    var obstacles = measuredNameBoxes();
+    var placed = placeSpeech(metrics, bubble.who, obstacles);
+    if (!placed) return;
+    bubbleRect = placed;
+    bubbleLines = metrics.lines;
+    drawBubbleBox(ctx, placed, metrics.lines);
   }
 
   function robot(ctx, x, y, anim) {
@@ -1031,15 +1216,6 @@
     items.sort(function (a, b) { return a.depth - b.depth; });
     for (var n = 0; n < items.length; n++) items[n].fn();
 
-    if (bubble && bubble.left > 0 && bubble.text) {
-      var whoPos = null;
-      if (bubble.who === "alex") whoPos = project(alexWalk.c, alexWalk.r, 0);
-      else if (bubble.who === "igor") whoPos = project(igorWalk.c, igorWalk.r, 0);
-      else if (bubble.who === "client" && clientWalk.visible) whoPos = project(clientWalk.c, clientWalk.r, 0);
-      else if (bubble.who === "cat") whoPos = project(catWalk.c, catWalk.r, 0);
-      if (whoPos) drawBubble(ctx, whoPos[0], whoPos[1], bubble.text);
-    }
-
     var hot = hover || selected;
     if (hot && ZONES[hot]) {
       var z = ZONES[hot];
@@ -1067,6 +1243,7 @@
     if (!ctx) return;
     drawScene(ctx, animState());
     placeLabels();
+    drawActiveBubble();
   }
 
   function placeLabels() {
@@ -1243,7 +1420,7 @@
         if (hit.href) go(hit.href);
       });
 
-      window.addEventListener("resize", placeLabels);
+      window.addEventListener("resize", function () { paint(); });
       resetDayScene();
       paint();
       applyVisibility();
@@ -1332,8 +1509,37 @@
         igor: pack(igorWalk),
         client: pack(clientWalk),
         cat: pack(catWalk),
-        clientVisible: clientWalk.visible
+        clientVisible: clientWalk.visible,
+        bubble: bubble && bubble.left > 0 ? { who: bubble.who, text: bubble.text, left: bubble.left } : null
       };
+    },
+    placeBubble: function (w, h, speaker, obstacles) {
+      return layoutBubble(w, h, speaker, obstacles || [], sceneBounds());
+    },
+    measureBubble: function (text) {
+      if (!ctx) return null;
+      var metrics = wrapBubbleLines(ctx, text);
+      return { w: metrics.w, h: metrics.h, lines: metrics.lines.slice() };
+    },
+    nameBoxes: function () {
+      return measuredNameBoxes().map(function (b) {
+        return { id: b.id, x: b.x, y: b.y, w: b.w, h: b.h };
+      });
+    },
+    bubbleFrame: function () {
+      if (!bubbleRect) return null;
+      return { x: bubbleRect.x, y: bubbleRect.y, w: bubbleRect.w, h: bubbleRect.h, lines: bubbleLines ? bubbleLines.slice() : [] };
+    },
+    repaint: function () {
+      paint();
+      if (!bubbleRect) return null;
+      return { x: bubbleRect.x, y: bubbleRect.y, w: bubbleRect.w, h: bubbleRect.h, lines: bubbleLines ? bubbleLines.slice() : [] };
+    },
+    showBubble: function (who, text) {
+      setBubble(who, text, 30);
+      paint();
+      if (!bubbleRect) return null;
+      return { x: bubbleRect.x, y: bubbleRect.y, w: bubbleRect.w, h: bubbleRect.h, lines: bubbleLines ? bubbleLines.slice() : [] };
     },
     paths: function () {
       return { alex: pathProblem(ALEX_PATH), igor: pathProblem(IGOR_PATH) };
