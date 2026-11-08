@@ -20,6 +20,8 @@
   var hover = null;
   var selected = null;
   var anchors = [];
+  var actorHits = [];
+  var inView = true;
   var screenCanvas = null;
   var screenCtx = null;
   var texture = null;
@@ -409,10 +411,14 @@
     ctx.fillRect(x, y - 6, 1, 5);
   }
 
-  function person(ctx, x, y, who, anim) {
-    var bob = anim.on && anim.bob ? 1 : 0;
+  function person(ctx, x, y, who, anim, face, stepping) {
+    var bob = anim.on && !stepping && anim.bob ? 1 : 0;
     var by = Math.round(y) - bob;
-    var bx = Math.round(x);
+    var dir = face < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(Math.round(x), 0);
+    ctx.scale(dir, 1);
+    var bx = 0;
     ctx.fillStyle = "rgba(12,8,16,.45)";
     ctx.fillRect(bx - 8, Math.round(y) - 1, 16, 3);
     var shirt = who === "alex" ? "#7c3aed" : "#f8f7ff";
@@ -422,9 +428,11 @@
     ctx.fillStyle = "#120c18";
     ctx.fillRect(bx - 7, by - 5, 5, 3);
     ctx.fillRect(bx + 2, by - 5, 5, 3);
+    var lift = stepping ? 2 : 0;
+    var phase = stepping && anim.stepPhase ? 1 : 0;
     ctx.fillStyle = pants;
-    ctx.fillRect(bx - 7, by - 14, 5, 9);
-    ctx.fillRect(bx + 2, by - 14, 5, 9);
+    ctx.fillRect(bx - 7, by - 14 - (phase ? lift : 0), 5, 9 - (phase ? 1 : 0));
+    ctx.fillRect(bx + 2, by - 14 - (phase ? 0 : lift), 5, 9 - (phase ? 0 : 1));
     ctx.fillStyle = shirt;
     ctx.fillRect(bx - 8, by - 27, 16, 13);
     ctx.fillStyle = shirtHi;
@@ -456,8 +464,155 @@
       ctx.fillRect(bx - 3, by - 33, 2, 1);
       ctx.fillRect(bx + 2, by - 33, 2, 1);
     }
-    anchors.push({ id: who, x: bx, y: by - 46 });
+    ctx.restore();
+    anchors.push({ id: who, x: Math.round(x), y: by - 46 });
+    actorHits.push({ id: who, x: Math.round(x) - 16, y: by - 48, w: 32, h: 52 });
   }
+
+  function cat(ctx, x, y, anim) {
+    var breath = anim.on && (Math.floor(anim.t / 12) % 2) === 0 ? 1 : 0;
+    var bx = Math.round(x);
+    var by = Math.round(y) - breath;
+    ctx.fillStyle = "rgba(80,30,8,.45)";
+    ctx.fillRect(bx - 12, by - 1, 24, 3);
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(bx - 12, by - 10, 24, 9);
+    ctx.fillRect(bx - 9, by - 13, 16, 4);
+    ctx.fillStyle = "#c2410c";
+    ctx.fillRect(bx - 8, by - 10, 2, 8);
+    ctx.fillRect(bx - 2, by - 12, 2, 9);
+    ctx.fillRect(bx + 4, by - 10, 2, 8);
+    ctx.fillStyle = "#fb923c";
+    ctx.fillRect(bx - 11, by - 16, 10, 7);
+    ctx.fillStyle = "#ea580c";
+    ctx.fillRect(bx - 11, by - 19, 3, 3);
+    ctx.fillRect(bx - 6, by - 19, 3, 3);
+    ctx.fillStyle = "#fecdd3";
+    ctx.fillRect(bx - 10, by - 18, 1, 2);
+    ctx.fillRect(bx - 5, by - 18, 1, 2);
+    ctx.fillStyle = "#7c2d12";
+    ctx.fillRect(bx - 10, by - 14, 3, 1);
+    ctx.fillRect(bx - 6, by - 14, 3, 1);
+    ctx.fillRect(bx - 8, by - 12, 2, 1);
+    ctx.fillStyle = "#fdba74";
+    ctx.fillRect(bx + 8, by - 9, 5, 3);
+    ctx.fillRect(bx + 11, by - 12, 2, 4);
+    ctx.fillStyle = "#fff7ed";
+    ctx.fillRect(bx + 11, by - 12, 2, 1);
+  }
+
+  var BLOCKS = [
+    [0.0, 0.5, 1.4, 3.5],
+    [0.0, 4.0, 1.8, 7.3],
+    [0.0, 7.2, 1.3, 8.5],
+    [1.45, 0.0, 5.5, 1.95],
+    [2.25, 1.45, 4.0, 3.1],
+    [6.85, 0.0, 10.85, 1.95],
+    [7.85, 1.45, 9.6, 3.1],
+    [10.25, 0.05, 12.0, 1.8],
+    [3.2, 4.25, 6.1, 6.55],
+    [3.05, 6.15, 7.25, 8.2],
+    [7.25, 6.5, 8.4, 7.75],
+    [9.1, 5.95, 10.05, 7.0]
+  ];
+
+  function blocked(c, r) {
+    if (c < 0.8 || r < 0.7 || c > 11.2 || r > 9.2) return true;
+    for (var i = 0; i < BLOCKS.length; i++) {
+      var b = BLOCKS[i];
+      if (c >= b[0] && c <= b[2] && r >= b[1] && r <= b[3]) return true;
+    }
+    return false;
+  }
+
+  function pathProblem(path) {
+    for (var i = 0; i < path.length - 1; i++) {
+      var a = path[i], b = path[i + 1];
+      var dist = Math.sqrt(Math.pow(b[0] - a[0], 2) + Math.pow(b[1] - a[1], 2));
+      var steps = Math.max(1, Math.ceil(dist / 0.08));
+      for (var s = 0; s <= steps; s++) {
+        var t = s / steps;
+        var c = a[0] + (b[0] - a[0]) * t;
+        var r = a[1] + (b[1] - a[1]) * t;
+        if (blocked(c, r)) return { segment: i, c: c, r: r };
+      }
+    }
+    return null;
+  }
+
+  function Walker(path) {
+    this.path = path;
+    this.i = 0;
+    this.c = path[0][0];
+    this.r = path[0][1];
+    this.pause = 10;
+    this.face = 1;
+    this.stepping = false;
+    this.phase = 0;
+    this.moved = 0;
+  }
+
+  Walker.prototype.tick = function (on) {
+    this.stepping = false;
+    if (!on) return;
+    if (this.pause > 0) {
+      this.pause -= 1;
+      return;
+    }
+    var next = this.path[(this.i + 1) % this.path.length];
+    var dc = next[0] - this.c;
+    var dr = next[1] - this.r;
+    var dist = Math.sqrt(dc * dc + dr * dr);
+    if (dist < 0.045) {
+      this.c = next[0];
+      this.r = next[1];
+      this.i = (this.i + 1) % this.path.length;
+      this.pause = this.i % 3 === 0 ? 18 : 7;
+      return;
+    }
+    var step = Math.min(0.05, dist);
+    var nc = this.c + (dc / dist) * step;
+    var nr = this.r + (dr / dist) * step;
+    if (blocked(nc, nr)) {
+      this.pause = 12;
+      return;
+    }
+    this.c = nc;
+    this.r = nr;
+    this.moved += step;
+    this.stepping = true;
+    this.phase = Math.floor(this.moved / 0.1) % 2;
+    this.face = (dc - dr) >= 0 ? 1 : -1;
+  };
+
+  var ALEX_PATH = [
+    [4.45, 3.25],
+    [6.35, 3.25],
+    [6.35, 5.55],
+    [8.6, 5.55],
+    [8.6, 8.75],
+    [4.8, 8.75],
+    [2.05, 8.75],
+    [2.05, 5.1],
+    [2.05, 3.25],
+    [4.45, 3.25]
+  ];
+  var IGOR_PATH = [
+    [9.75, 3.35],
+    [10.45, 3.35],
+    [10.45, 8.7],
+    [8.7, 8.7],
+    [8.7, 4.25],
+    [6.45, 4.25],
+    [6.45, 3.35],
+    [9.75, 3.35]
+  ];
+  var alexWalk = new Walker(ALEX_PATH);
+  var igorWalk = new Walker(IGOR_PATH);
+  igorWalk.i = 2;
+  igorWalk.c = IGOR_PATH[2][0];
+  igorWalk.r = IGOR_PATH[2][1];
+  igorWalk.pause = 4;
 
   function robot(ctx, x, y, anim) {
     var bob = anim.on ? (anim.t % 4 < 2 ? 2 : 0) : 0;
@@ -487,6 +642,7 @@
 
   function drawScene(ctx, anim) {
     anchors = [];
+    actorHits = [];
     ctx.fillStyle = "#100a22";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     drawWalls(ctx, anim);
@@ -578,6 +734,8 @@
       prism(ctx, 6.53, 6.45, 0.42, 1.45, 10, 18, "#c4b5fd", "#5b21b6", "#8b5cf6");
       prism(ctx, 4.15, 6.9, 0.9, 0.75, 10, 14, "#f8fafc", "#c4b5fd", "#ede9fe");
       prism(ctx, 5.35, 6.95, 0.9, 0.7, 10, 14, "#22c55e", "#166534", "#4ade80");
+      var nap = project(4.7, 7.25, 16);
+      cat(ctx, nap[0], nap[1], anim);
     });
 
     add(mid(7.55, 6.7, 1.3, 1.05), function () { plant(ctx, 7.55, 6.85, anim, 1); });
@@ -586,13 +744,15 @@
       robot(ctx, foot[0], foot[1], anim);
     });
 
-    add(mid(3.7, 3.2, 0.2, 0.2), function () {
-      var foot = project(3.7, 3.25, 0);
-      person(ctx, foot[0], foot[1], "alex", anim);
+    add(alexWalk.c + alexWalk.r, function () {
+      var foot = project(alexWalk.c, alexWalk.r, 0);
+      anim.stepPhase = alexWalk.phase;
+      person(ctx, foot[0], foot[1], "alex", anim, alexWalk.face, alexWalk.stepping && anim.on);
     });
-    add(mid(8.85, 3.2, 0.2, 0.2), function () {
-      var foot = project(8.85, 3.25, 0);
-      person(ctx, foot[0], foot[1], "igor", anim);
+    add(igorWalk.c + igorWalk.r, function () {
+      var foot = project(igorWalk.c, igorWalk.r, 0);
+      anim.stepPhase = igorWalk.phase;
+      person(ctx, foot[0], foot[1], "igor", anim, igorWalk.face, igorWalk.stepping && anim.on);
     });
 
     items.sort(function (a, b) { return a.depth - b.depth; });
@@ -660,21 +820,29 @@
     return found;
   }
 
-  function showTip(id) {
-    var zone = ZONES[id];
-    var eye = document.getElementById("tip-eye");
-    var title = document.getElementById("tip-title");
-    var text = document.getElementById("tip-text");
-    var link = document.getElementById("tip-link");
-    if (!zone || !eye || !title || !text || !link) return;
-    eye.textContent = zone.eye;
-    title.textContent = zone.title;
-    text.textContent = zone.text;
-    link.href = zone.href;
-    link.textContent = zone.link;
-    link.hidden = false;
+  function resolveHit(x, y) {
+    for (var i = actorHits.length - 1; i >= 0; i--) {
+      var a = actorHits[i];
+      if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) {
+        return { type: "person", id: a.id, href: "/leadweb/o-nas/" };
+      }
+    }
+    var zone = hitTest(x, y);
+    if (zone && ZONES[zone]) return { type: "zone", id: zone, href: ZONES[zone].href };
+    return null;
+  }
+
+  function go(href) {
+    if (typeof window.__studioGo === "function") {
+      window.__studioGo(href);
+      return;
+    }
+    window.location.assign(href);
+  }
+
+  function markZone(id) {
     document.querySelectorAll("[data-zone]").forEach(function (el) {
-      if (el.getAttribute("data-zone") === id) el.setAttribute("aria-current", "true");
+      if (id && el.getAttribute("data-zone") === id) el.setAttribute("aria-current", "true");
       else el.removeAttribute("aria-current");
     });
   }
@@ -683,8 +851,14 @@
     if (!ZONES[id]) return;
     selected = id;
     hover = id;
-    showTip(id);
+    markZone(id);
     if (repaintNow) paint();
+  }
+
+  function applyVisibility() {
+    if (!game || !game.loop) return;
+    if (inView) game.loop.wake();
+    else game.loop.sleep();
   }
 
   function boot() {
@@ -728,18 +902,22 @@
             paint();
             var self = this;
             this.input.on("pointermove", function (p) {
-              var id = hitTest(p.worldX, p.worldY);
-              if (game && game.canvas) game.canvas.style.cursor = id ? "pointer" : "default";
+              var hit = resolveHit(p.worldX, p.worldY);
+              var id = hit && hit.type === "zone" ? hit.id : null;
+              if (game && game.canvas) game.canvas.style.cursor = hit ? "pointer" : "default";
               if (id !== hover) {
-                hover = id || selected;
-                if (id) showTip(id);
+                hover = id;
+                markZone(id);
                 paint();
               }
             });
             this.input.on("pointerdown", function (p) {
-              var id = hitTest(p.worldX, p.worldY);
-              if (id) selectZone(id, true);
+              var hit = resolveHit(p.worldX, p.worldY);
+              if (!hit) return;
+              if (hit.type === "zone") selectZone(hit.id, true);
+              go(hit.href);
             });
+            applyVisibility();
             var stage = document.getElementById("studio-stage");
             if (stage) {
               stage.dataset.ready = "1";
@@ -749,9 +927,13 @@
             window.addEventListener("resize", placeLabels);
           },
           update: function () {
-            if (!(playing && !reducedQueryOff())) return;
+            if (!inView || !(playing && !reducedQueryOff())) return;
             tick += 1;
-            if (tick % 8 === 0) paint();
+            if (tick % 8 === 0) {
+              alexWalk.tick(true);
+              igorWalk.tick(true);
+              paint();
+            }
           }
         }
       });
@@ -776,8 +958,8 @@
       document.documentElement.dataset.motion = moving ? "on" : "off";
       if (note) {
         note.textContent = reduced && !playing
-          ? "В системе включено уменьшение движения, сцена стоит. Кнопка запускает короткие движения."
-          : (moving ? "Короткие движения на местах: моргание, пар, экран." : "Движение на паузе. Нажимать зоны можно.");
+          ? "В системе включено уменьшение движения, прогулка стоит. Кнопка её запускает. Ссылки работают."
+          : (moving ? "Алексей и Игорь ходят по студии. Нажатие на любого открывает «О нас»." : "Прогулка на паузе. Ссылки и нажатия работают.");
       }
     }
     if (pause) {
@@ -793,23 +975,57 @@
     if (stage) stage.dataset.motion = document.documentElement.dataset.motion || "";
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function startStudio() {
+    if (startStudio.done || !document.getElementById("studio-stage")) return;
+    startStudio.done = true;
     bindUi();
     boot();
     setTimeout(function () {
       var stage = document.getElementById("studio-stage");
       if (!stage || !stage.dataset.ready) showFallback("Сцена не включилась. Разделы ниже всё равно открываются.");
     }, 2500);
-  });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startStudio);
+  else startStudio();
 
   window.LeadStudio = {
     select: function (id) { selectZone(id, true); },
+    setVisible: function (value) {
+      inView = !!value;
+      applyVisibility();
+    },
     centers: function () {
       return Object.keys(ZONES).map(function (id) {
         var z = ZONES[id];
         var p = project(z.c + z.cw / 2, z.r + z.rw / 2, 2);
         return { id: id, x: p[0], y: p[1] };
       });
+    },
+    actors: function () {
+      return actorHits.map(function (a) {
+        return { id: a.id, x: a.x + a.w / 2, y: a.y + a.h / 2 };
+      });
+    },
+    resolve: function (x, y) { return resolveHit(x, y); },
+    paths: function () {
+      return { alex: pathProblem(ALEX_PATH), igor: pathProblem(IGOR_PATH) };
+    },
+    simulate: function (steps) {
+      function run(path) {
+        var w = new Walker(path);
+        var bad = 0;
+        var minC = w.c, maxC = w.c, minR = w.r, maxR = w.r;
+        for (var i = 0; i < steps; i++) {
+          w.tick(true);
+          if (blocked(w.c, w.r)) bad += 1;
+          if (w.c < minC) minC = w.c;
+          if (w.c > maxC) maxC = w.c;
+          if (w.r < minR) minR = w.r;
+          if (w.r > maxR) maxR = w.r;
+        }
+        return { bad: bad, minC: minC, maxC: maxC, minR: minR, maxR: maxR, c: w.c, r: w.r, i: w.i };
+      }
+      return { alex: run(ALEX_PATH), igor: run(IGOR_PATH) };
     }
   };
 })();

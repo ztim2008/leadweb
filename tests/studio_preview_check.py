@@ -33,8 +33,8 @@ for href in (
 ):
     if href not in page:
         fail(f"missing {href}")
-if "studio-preview" in home or "studio-preview" in sitemap:
-    fail("studio preview linked from homepage or sitemap")
+if "studio-preview.html" in home or "studio-preview" in sitemap:
+    fail("studio preview page linked from homepage or sitemap")
 for bad in ("tel:", "mailto:", "max.ru", "t.me/", "Позвонить"):
     if bad in page or bad in script:
         fail(f"contact marker in studio preview: {bad}")
@@ -54,6 +54,22 @@ if "id=\"pause\"" not in page or "data-zone=\"talk\"" not in page:
     fail("pause or zone controls missing")
 if "claude-office" in script or "PMF-game" in script:
     fail("prototype should not embed the reference projects")
+if "Выберите место" in page or "Выберите место" in script:
+    fail("topic picker dialog is still present")
+for token in ("ALEX_PATH", "IGOR_PATH", "function cat", "/leadweb/o-nas/", "setVisible"):
+    if token not in script:
+        fail(f"studio script missing {token}")
+if 'id="studio"' not in home:
+    fail("homepage missing studio anchor")
+if home.count("<h1") != 1:
+    fail("homepage h1 count")
+hero_end = home.find("</section>")
+if 'id="studio"' not in home[hero_end:hero_end + 500]:
+    fail("studio is not directly after the hero")
+if "phaser.min.js" in home.split("</head>", 1)[0]:
+    fail("phaser is loaded from the document head")
+if "studio-preview" in (ROOT / "sitemap.xml").read_text(encoding="utf-8"):
+    fail("sitemap lists the studio preview")
 
 if errors:
     print(f"{errors} failed")

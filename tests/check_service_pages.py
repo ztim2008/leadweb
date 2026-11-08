@@ -165,8 +165,20 @@ def main():
     errors = 0
     home = (ROOT / "index.html").read_text(encoding="utf-8")
     main = home.split("<main", 1)[1].split("</main>", 1)[0]
-    if "automation.html" in main or "bitrix.html" in main:
-        errors += fail("homepage main content links to the new pages")
+    studio = ""
+    marker = '<section class="sec" id="studio">'
+    if marker in main:
+        studio = main.split(marker, 1)[1].split("</section>", 1)[0]
+    rest = main.replace(marker + studio + "</section>", "", 1) if studio else main
+    if "automation.html" in rest or "bitrix.html" in rest:
+        errors += fail("homepage main content links to the new pages outside the studio")
+    if not studio:
+        errors += fail("homepage studio block missing")
+    hero_end = main.find("</section>")
+    if 'id="studio"' not in main[hero_end:hero_end + 400]:
+        errors += fail("studio is not the block after the hero")
+    if main.find('id="studio"') > main.find('id="calc-sec"'):
+        errors += fail("studio is not before the calculator")
     if "Lead.web" not in home.split("<h1", 1)[1][:400]:
         errors += fail("homepage h1 changed")
     if home.count('href="/leadweb/automation.html"') < 1 or home.count('href="/leadweb/bitrix.html"') < 1:
