@@ -72,12 +72,21 @@ LOCAL = {
     "/leadweb/img/favicon.svg": ROOT / "img" / "favicon.svg",
     "/leadweb/img/og.jpg": ROOT / "img" / "og.jpg",
     "/leadweb/img/og-avto.jpg": ROOT / "img" / "og-avto.jpg",
+    "/leadweb/img/logo-1c.png": ROOT / "img" / "logo-1c.png",
+    "/leadweb/img/logo-1c-bitrix.svg": ROOT / "img" / "logo-1c-bitrix.svg",
+    "/leadweb/img/mascot-automation.jpg": ROOT / "img" / "mascot-automation.jpg",
+    "/leadweb/img/mascot-automation-640.webp": ROOT / "img" / "mascot-automation-640.webp",
+    "/leadweb/img/mascot-automation-960.webp": ROOT / "img" / "mascot-automation-960.webp",
+    "/leadweb/img/mascot-automation-1280.webp": ROOT / "img" / "mascot-automation-1280.webp",
+    "/leadweb/img/mascot-bitrix.jpg": ROOT / "img" / "mascot-bitrix.jpg",
+    "/leadweb/img/mascot-bitrix-640.webp": ROOT / "img" / "mascot-bitrix-640.webp",
+    "/leadweb/img/mascot-bitrix-960.webp": ROOT / "img" / "mascot-bitrix-960.webp",
+    "/leadweb/img/mascot-bitrix-1280.webp": ROOT / "img" / "mascot-bitrix-1280.webp",
 }
 FORBIDDEN = [
     r"Cursor",
     r"агент",
     r"ROI",
-    r"партн[её]р",
     r"сертифик",
     r"отзыв",
     r"\d+\s*лет",
@@ -155,8 +164,13 @@ def fail(msg):
 def main():
     errors = 0
     home = (ROOT / "index.html").read_text(encoding="utf-8")
-    if "automation.html" in home or "bitrix.html" in home:
-        errors += fail("homepage links to the new pages; it must stay unchanged")
+    main = home.split("<main", 1)[1].split("</main>", 1)[0]
+    if "automation.html" in main or "bitrix.html" in main:
+        errors += fail("homepage main content links to the new pages")
+    if "Lead.web" not in home.split("<h1", 1)[1][:400]:
+        errors += fail("homepage h1 changed")
+    if home.count('href="/leadweb/automation.html"') < 1 or home.count('href="/leadweb/bitrix.html"') < 1:
+        errors += fail("homepage menu or footer missing the new routes")
     for name, spec in PAGES.items():
         raw = (ROOT / name).read_text(encoding="utf-8")
         doc = Doc()
@@ -211,7 +225,11 @@ def main():
                     errors += fail(f"{name} unexpected contact {base}")
                 continue
             if base.startswith("http"):
-                if base not in CONTACTS and "fonts.googleapis.com" not in base and "fonts.gstatic.com" not in base and "ztim2008.github.io/leadweb/" not in base:
+                allowed = base in CONTACTS or base in {
+                    "https://1c.ru/",
+                    "https://www.1c-bitrix.ru/products/cms/",
+                } or "fonts.googleapis.com" in base or "fonts.gstatic.com" in base or "ztim2008.github.io/leadweb/" in base
+                if not allowed:
                     errors += fail(f"{name} unexpected external link {base}")
                 continue
             path = base.split("?")[0]
@@ -225,6 +243,20 @@ def main():
         other = "/leadweb/bitrix.html" if name == "automation.html" else "/leadweb/automation.html"
         if other not in [h.split("#")[0] for h in doc.hrefs]:
             errors += fail(f"{name} does not link to {other}")
+        imgs = [i for i in doc.imgs]
+        alts = " ".join(i.get("alt", "") for i in imgs)
+        if alts.count("вымышленный") != 1:
+            errors += fail(f"{name} mascot alt count {alts.count('вымышленный')}")
+        if "Это не сотрудник" not in alts:
+            errors += fail(f"{name} mascot alt does not say it is not an employee")
+        if name == "automation.html" and "Товарный знак «1С»" not in alts:
+            errors += fail("automation page missing 1C logo alt")
+        if name == "bitrix.html" and "Товарный знак «1С-Битрикс»" not in alts:
+            errors += fail("bitrix page missing Bitrix logo alt")
+        if "франчайзи" in text and "не франчайзи" not in text:
+            errors += fail(f"{name} franchise claim")
+        if re.search(r"(?<!не )партн[её]р", text, re.I):
+            errors += fail(f"{name} partnership claim")
         if "/leadweb/" not in [h.split("#")[0] for h in doc.hrefs]:
             errors += fail(f"{name} does not link home")
         try:

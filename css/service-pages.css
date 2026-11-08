@@ -1,8 +1,28 @@
 /* Страницы услуг: автоматизация вокруг 1С и сайт на 1С-Битрикс.
    Только токены и оттенки, уже используемые в site.css. */
 
-.svc-hero.hero{min-height:0;padding-bottom:72px}
+.svc-hero.hero{min-height:0;padding-bottom:56px}
 .svc-hero h1{max-width:18ch;font-size:clamp(32px,4.4vw,58px)}
+.svc-hero-layout{display:flex;flex-direction:column;align-items:stretch}
+.svc-hero-copy{position:relative;z-index:2;min-width:0}
+.mascot{margin:22px 0 0;width:min(100%,520px);align-self:flex-end}
+.mascot img{width:100%;height:auto;display:block}
+.brand-lockup{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:2px 0 16px}
+.brand-plate{display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:12px;padding:8px 12px;line-height:0;text-decoration:none;box-shadow:0 10px 28px -18px rgba(0,0,0,.8)}
+.brand-plate img{height:34px;width:auto;display:block}
+.brand-plate img.logo-bitrix{height:24px}
+.brand-cap{margin:0;max-width:26rem;color:#ecebff;font-size:14px}
+@media(min-width:900px){
+  .svc-hero-layout{display:grid;grid-template-columns:minmax(0,1fr);align-items:center;min-height:520px}
+  .svc-hero-copy,.mascot{grid-area:1/1}
+  .svc-hero-copy{max-width:46%;align-self:center}
+  .mascot{justify-self:end;align-self:center;width:min(760px,70%);margin:0;z-index:1;pointer-events:none}
+}
+@media(max-width:520px){
+  .brand-plate img{height:30px}
+  .brand-plate img.logo-bitrix{height:22px}
+  .brand-cap{font-size:13px}
+}
 .svc section{scroll-margin-top:88px}
 .svc .grid>.card{display:flex;flex-direction:column}
 .svc .card .deliver{margin-top:auto}
