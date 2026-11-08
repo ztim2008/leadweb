@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Прототип студии Lead.web</title>
+<meta name="description" content="Черновой изометрический прототип студии Lead.web. На главной странице этой сцены нет.">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAKklEQVR4nGMU4FJiIAUwkaSaLhpYkDkzvK9iVZSxVZuOThqRGhiHQVoCALgpA5mTOQ4/AAAAAElFTkSuQmCC">
+<style>
+:root{--bg:#100a22;--ink:#f4f1ff;--muted:#c4bde4;--line:rgba(196,181,253,.35);--a:#a855f7}
+*{box-sizing:border-box}[hidden]{display:none !important}
+html,body{margin:0;background:radial-gradient(900px 420px at 80% -10%,#3b0764 0,transparent 55%),var(--bg);color:var(--ink);font:16px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding:20px 16px 40px}
+.skip{position:absolute;left:-999px}.skip:focus{left:12px;top:12px;z-index:5;background:#fff;color:#111;padding:8px}
+.top{max-width:960px;margin:0 auto 14px}
+.logo{font-weight:750;color:#fff;text-decoration:none;letter-spacing:-.03em;font-size:20px}
+.logo b{color:var(--a)}
+.eye{margin:10px 0 0;color:#ddd6fe;font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+h1{margin:6px 0 8px;font-size:clamp(28px,5vw,42px);line-height:1.1;letter-spacing:-.03em}
+.lead{margin:0;max-width:68ch;color:var(--muted)}
+.limits{margin:12px 0 0;padding-left:18px;color:var(--muted)}
+.limits li{margin:2px 0}
+.stage-wrap{position:relative;max-width:960px;margin:18px auto 0}
+#studio-stage{width:100%;aspect-ratio:452/308;background:#100a22;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+#studio-stage canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+.labels{position:absolute;inset:0;pointer-events:none}
+.name{position:absolute;transform:translate(-50%,-100%);background:rgba(16,10,34,.88);color:#fff;border:1px solid rgba(196,181,253,.8);border-radius:999px;padding:2px 7px;font-size:12px;line-height:1.3;white-space:nowrap}
+.fallback{margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
+.tip{max-width:960px;margin:14px auto 0;padding:14px 16px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04)}
+.tip h2{margin:0 0 6px;font-size:22px}
+.tip p{margin:0;color:var(--muted)}
+.tip a,.zone,.pause{display:inline-flex;align-items:center;justify-content:center;min-height:48px;margin-top:10px;padding:10px 16px;border-radius:999px;text-decoration:none;font-weight:650}
+.tip a{background:var(--a);color:#fff}
+.bar{max-width:960px;margin:12px auto 0;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.pause{border:1px solid var(--line);background:transparent;color:#fff;font:inherit;cursor:pointer}
+.pause:focus-visible,.zone:focus-visible,.tip a:focus-visible,.logo:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.note{margin:0;color:var(--muted);flex:1;min-width:16ch}
+.zones{max-width:960px;margin:8px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.zone{margin:0;flex-direction:column;align-items:flex-start;gap:2px;background:rgba(255,255,255,.04);color:#fff;border:1px solid var(--line);border-radius:16px;min-height:72px}
+.zone b{font-size:16px}
+.zone span{color:var(--muted);font-size:14px;font-weight:500}
+.zone[aria-current="true"]{border-color:#e9d5ff;background:rgba(168,85,247,.2)}
+.foot{max-width:960px;margin:18px auto 0;color:var(--muted);font-size:14px}
+.foot a{color:#ddd6fe}
+@media(max-width:640px){.zones{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a class="skip" href="#zones">К разделам</a>
+<header class="top">
+  <a class="logo" href="/leadweb/">Lead<b>.web</b></a>
+  <p class="eye">Черновик для просмотра</p>
+  <h1>Студия Lead.web</h1>
+  <p class="lead">Небольшая изометрическая сцена: два места, разговор за столом, экран с работами и робот-помощник. На главную страницу она пока не поставлена.</p>
+  <ul class="limits">
+    <li>Алексей и Игорь здесь условные фигурки, не портреты и не фото.</li>
+    <li>По комнате нельзя ходить: люди остаются на своих местах.</li>
+    <li>Кнопки ведут на уже существующие страницы. Звонков и форм здесь нет.</li>
+  </ul>
+</header>
+<div class="stage-wrap">
+  <div id="studio-stage" role="img" aria-label="Изометрическая студия Lead.web: рабочие места Алексея и Игоря, зона общения, экран с работами и робот."></div>
+  <div class="labels" aria-hidden="true">
+    <span class="name" id="label-alex">Алексей</span>
+    <span class="name" id="label-igor">Игорь</span>
+    <span class="name" id="label-robot">Робот</span>
+  </div>
+  <p id="studio-fallback" class="fallback" hidden>Сцена не включилась. Разделы ниже всё равно открываются.</p>
+</div>
+<section class="tip" id="tip" aria-live="polite">
+  <p class="eye" id="tip-eye">Сцена</p>
+  <h2 id="tip-title">Выберите место</h2>
+  <p id="tip-text">Нажмите фигуру или предмет в комнате, либо кнопку ниже. Подсказка появится здесь.</p>
+  <a id="tip-link" href="/leadweb/uslugi/" hidden>Открыть раздел</a>
+</section>
+<div class="bar">
+  <button type="button" class="pause" id="pause" aria-pressed="false">Пауза</button>
+  <p class="note" id="motion-note"></p>
+</div>
+<nav class="zones" id="zones" aria-label="Разделы студии">
+  <a class="zone" href="/leadweb/automation.html" data-zone="alex"><b>Стол Алексея</b><span>Автоматизация с 1С</span></a>
+  <a class="zone" href="/leadweb/bitrix.html" data-zone="igor"><b>Стол Игоря</b><span>Сайт на 1С-Битрикс</span></a>
+  <a class="zone" href="/leadweb/o-nas/" data-zone="talk"><b>Зона общения</b><span>О нас</span></a>
+  <a class="zone" href="/leadweb/portfolio/" data-zone="portfolio"><b>Экран с работами</b><span>Портфолио</span></a>
+</nav>
+<noscript><p class="lead">Картинка комнаты включается скриптом. Ссылки на разделы выше остаются в разметке.</p></noscript>
+<footer class="foot">
+  <p>Сцена, мебель и фигурки нарисованы кодом в этом прототипе. Чужие спрайты и логотипы не использовались. Движок Phaser 3.88.2 — лицензия MIT, файл <code>js/vendor/phaser.min.js</code>, текст лицензии рядом. Страница закрыта от индексации и не входит в меню сайта.</p>
+  <p><a href="/leadweb/">На главную</a></p>
+</footer>
+<script src="js/vendor/phaser.min.js"></script>
+<script src="js/studio-preview.js"></script>
+</body>
+</html>
