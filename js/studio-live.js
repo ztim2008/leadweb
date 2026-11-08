@@ -15,6 +15,8 @@
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var playing = !reduced;
   var tick = 0;
+  var clock = 0;
+  var lastTs = 0;
   var hover = null;
   var selected = null;
   var anchors = [];
@@ -412,8 +414,9 @@
 
   function person(ctx, x, y, who, anim, face, stepping, pose) {
     var sit = pose === "sit";
-    var bob = anim.on && !stepping && !sit && anim.bob ? 1 : 0;
-    var by = Math.round(y) - bob + (sit ? 5 : 0);
+    var sitBlend = typeof pose === "number" ? pose : (sit ? 1 : 0);
+    var by = Math.round(y + sitBlend * 3);
+    sit = sitBlend >= 0.5;
     var dir = face < 0 ? -1 : 1;
     ctx.save();
     ctx.translate(Math.round(x), 0);
@@ -428,7 +431,7 @@
     ctx.fillStyle = "#120c18";
     ctx.fillRect(bx - 7, by - (sit ? 3 : 5), 5, 3);
     ctx.fillRect(bx + 2, by - (sit ? 3 : 5), 5, 3);
-    var lift = stepping ? 2 : 0;
+    var lift = stepping ? 1 : 0;
     var phase = stepping && anim.stepPhase ? 1 : 0;
     ctx.fillStyle = pants;
     if (sit) {
@@ -476,10 +479,9 @@
   }
 
   function cat(ctx, x, y, anim, face, stepping) {
-    var bounce = stepping && anim.on ? (anim.stepPhase ? 2 : 0) : (anim.on && catMood > 0 ? (Math.floor(anim.t / 3) % 2) : 0);
     var dir = face < 0 ? -1 : 1;
     var bx = 0;
-    var by = Math.round(y) - bounce;
+    var by = Math.round(y);
     ctx.save();
     ctx.translate(Math.round(x), 0);
     ctx.scale(dir, 1);
@@ -506,7 +508,7 @@
     ctx.fillStyle = "#fdba74";
     ctx.fillRect(bx - 12, by - 8, 5, 3);
     ctx.fillRect(bx - 14, by - 12, 2, 5);
-    if (catMood > 0) {
+    if (catMood > 0 && anim.on && (Math.floor(anim.t * 5) % 2) === 0) {
       ctx.fillStyle = "#fff7ed";
       ctx.fillRect(bx + 8, by - 22, 2, 2);
       ctx.fillRect(bx + 12, by - 24, 2, 2);
@@ -571,23 +573,26 @@
     this.endPose = "stand";
     this.endFace = this.face;
     this.visible = true;
+    this.sit = 0;
+    this.gait = 0;
   }
 
-  Actor.prototype.hold = function (c, r, face, pose, ticks) {
+  Actor.prototype.hold = function (c, r, face, pose, seconds) {
     this.path = null;
     this.c = c;
     this.r = r;
     this.face = face;
     this.pose = pose || "stand";
+    this.sit = this.pose === "sit" ? 1 : 0;
     this.stepping = false;
-    this.holdLeft = Math.max(1, ticks || 1);
+    this.holdLeft = Math.max(0.05, seconds || 0.05);
     this.busy = true;
   };
 
-  Actor.prototype.follow = function (path, endPose, endFace, holdTicks) {
+  Actor.prototype.follow = function (path, endPose, endFace, holdSeconds) {
     var route = path.slice();
     if (!route.length) {
-      this.hold(this.c, this.r, endFace != null ? endFace : this.face, endPose || "stand", holdTicks || 1);
+      this.hold(this.c, this.r, endFace != null ? endFace : this.face, endPose || "stand", holdSeconds || 0.05);
       return;
     }
     if (Math.sqrt(Math.pow(route[0][0] - this.c, 2) + Math.pow(route[0][1] - this.r, 2)) > 0.12) {
@@ -599,7 +604,7 @@
     this.pose = "stand";
     this.endPose = endPose || "stand";
     this.endFace = endFace != null ? endFace : this.face;
-    this.holdLeft = Math.max(0, holdTicks || 0);
+    this.holdLeft = Math.max(0, holdSeconds || 0);
     this.busy = true;
   };
 
@@ -607,53 +612,67 @@
     return !this.busy;
   };
 
-  Actor.prototype.tick = function (on) {
+  Actor.prototype.advance = function (dt) {
     this.stepping = false;
-    if (!on) return;
-    if (this.path) {
-      if (this.pause > 0) {
-        this.pause -= 1;
-        return;
+    var sitTarget = this.pose === "sit" ? 1 : 0;
+    if (this.sit == null) this.sit = sitTarget;
+    var blend = dt / 0.35;
+    if (this.sit < sitTarget) this.sit = Math.min(sitTarget, this.sit + blend);
+    else if (this.sit > sitTarget) this.sit = Math.max(sitTarget, this.sit - blend);
+    if (this.path && this.i >= this.path.length - 1) {
+      var done = this.path[this.path.length - 1];
+      this.c = done[0];
+      this.r = done[1];
+      this.path = null;
+      this.pose = this.endPose;
+      this.face = this.endFace;
+    }
+    if (!this.path) {
+      if (this.holdLeft > 0) {
+        this.holdLeft -= dt;
+        if (this.holdLeft <= 0) {
+          this.holdLeft = 0;
+          this.busy = false;
+        }
       }
-      if (this.i >= this.path.length - 1) {
-        var last = this.path[this.path.length - 1];
-        this.c = last[0];
-        this.r = last[1];
-        this.path = null;
-        this.pose = this.endPose;
-        this.face = this.endFace;
-        if (this.holdLeft <= 0) this.busy = false;
-        return;
-      }
+      return;
+    }
+    var remain = WALK * dt;
+    var guard = 0;
+    while (remain > 1e-8 && this.path && this.i < this.path.length - 1 && guard < 4) {
+      guard += 1;
       var next = this.path[this.i + 1];
       var dc = next[0] - this.c;
       var dr = next[1] - this.r;
       var dist = Math.sqrt(dc * dc + dr * dr);
-      if (dist < 0.045) {
+      if (dist <= remain + 1e-9) {
+        if (blocked(next[0], next[1])) return;
         this.c = next[0];
         this.r = next[1];
+        this.moved += dist;
         this.i += 1;
-        this.pause = 3;
+        remain -= dist;
+        if (dist > 1e-6) this.face = (dc - dr) >= 0 ? 1 : -1;
+        if (this.i >= this.path.length - 1) {
+          this.path = null;
+          this.pose = this.endPose;
+          this.face = this.endFace;
+          if (this.holdLeft <= 0) this.busy = false;
+          return;
+        }
+      } else {
+        var nc = this.c + (dc / dist) * remain;
+        var nr = this.r + (dr / dist) * remain;
+        if (blocked(nc, nr)) return;
+        this.c = nc;
+        this.r = nr;
+        this.moved += remain;
+        this.stepping = true;
+        this.gait += dt;
+        this.phase = Math.floor(this.gait / 0.22) % 2;
+        this.face = (dc - dr) >= 0 ? 1 : -1;
         return;
       }
-      var step = Math.min(0.055, dist);
-      var nc = this.c + (dc / dist) * step;
-      var nr = this.r + (dr / dist) * step;
-      if (blocked(nc, nr)) {
-        this.pause = 10;
-        return;
-      }
-      this.c = nc;
-      this.r = nr;
-      this.moved += step;
-      this.stepping = true;
-      this.phase = Math.floor(this.moved / 0.1) % 2;
-      this.face = (dc - dr) >= 0 ? 1 : -1;
-      return;
-    }
-    if (this.holdLeft > 0) {
-      this.holdLeft -= 1;
-      if (this.holdLeft <= 0) this.busy = false;
     }
   };
 
@@ -691,9 +710,11 @@
     IGOR_DESK
   ];
 
-  var HOLD_WORK = 64;
-  var HOLD_TALK = 50;
-  var HOLD_CLIENT = 70;
+  var WALK = 0.3;
+  var MAX_DT = 0.05;
+  var HOLD_WORK = 7.5;
+  var HOLD_TALK = 4.5;
+  var HOLD_CLIENT = 6;
   var DOOR = [10.4, 8.7];
   var CLIENT_SPOT = [5.2, 3.95];
   var CAT_SPOTS = [
@@ -711,7 +732,9 @@
   var clientWalk = new Actor(DOOR[0], DOOR[1], -1);
   var catWalk = new Actor(CAT_SPOTS[0][0], CAT_SPOTS[0][1], 1);
   alexWalk.pose = "sit";
+  alexWalk.sit = 1;
   igorWalk.pose = "sit";
+  igorWalk.sit = 1;
   clientWalk.visible = false;
   catWalk.pose = "stand";
 
@@ -769,8 +792,8 @@
     }
   ];
 
-  function setBubble(who, text, ticks) {
-    bubble = { who: who, text: text, left: ticks || 40 };
+  function setBubble(who, text, seconds) {
+    bubble = { who: who, text: text, left: seconds || 3.6 };
   }
 
   function setDayNote(text) {
@@ -784,7 +807,7 @@
     dayAct = ((index % dayActs.length) + dayActs.length) % dayActs.length;
     var act = dayActs[dayAct];
     setDayNote(act.note);
-    if (act.bubble) setBubble(act.bubble.who, act.bubble.text, 45);
+    if (act.bubble) setBubble(act.bubble.who, act.bubble.text, 3.6);
     act.run();
   }
 
@@ -808,17 +831,21 @@
     if (!catWalk.ready()) return;
     var spot = pickCatSpot();
     if (!spot) return;
-    catWalk.follow([[catWalk.c, catWalk.r], spot], "stand", 1, 18 + Math.floor(Math.random() * 20));
+    catWalk.follow([[catWalk.c, catWalk.r], spot], "stand", 1, 2.4 + Math.random() * 2.2);
   }
 
-  function tickDay() {
+  function tickDay(dt) {
     if (!(playing && !reducedQueryOff())) return;
-    alexWalk.tick(true);
-    igorWalk.tick(true);
-    if (clientWalk.visible) clientWalk.tick(true);
-    catWalk.tick(true);
-    if (bubble && bubble.left > 0) bubble.left -= 1;
-    if (catMood > 0) catMood -= 1;
+    clock += dt;
+    alexWalk.advance(dt);
+    igorWalk.advance(dt);
+    if (clientWalk.visible) clientWalk.advance(dt);
+    catWalk.advance(dt);
+    if (bubble && bubble.left > 0) {
+      bubble.left -= dt;
+      if (bubble.left < 0) bubble.left = 0;
+    }
+    if (catMood > 0) catMood -= dt;
     if (catWalk.ready()) wanderCat();
     var clientDone = !clientWalk.visible || clientWalk.ready();
     if (alexWalk.ready() && igorWalk.ready() && clientDone) startDayAct(dayAct + 1);
@@ -981,18 +1008,18 @@
     add(alexWalk.c + alexWalk.r, function () {
       var foot = project(alexWalk.c, alexWalk.r, 0);
       anim.stepPhase = alexWalk.phase;
-      person(ctx, foot[0], foot[1], "alex", anim, alexWalk.face, alexWalk.stepping && anim.on, alexWalk.pose);
+      person(ctx, foot[0], foot[1], "alex", anim, alexWalk.face, alexWalk.stepping && anim.on, alexWalk.sit);
     });
     add(igorWalk.c + igorWalk.r, function () {
       var foot = project(igorWalk.c, igorWalk.r, 0);
       anim.stepPhase = igorWalk.phase;
-      person(ctx, foot[0], foot[1], "igor", anim, igorWalk.face, igorWalk.stepping && anim.on, igorWalk.pose);
+      person(ctx, foot[0], foot[1], "igor", anim, igorWalk.face, igorWalk.stepping && anim.on, igorWalk.sit);
     });
     if (clientWalk.visible) {
       add(clientWalk.c + clientWalk.r, function () {
         var foot = project(clientWalk.c, clientWalk.r, 0);
         anim.stepPhase = clientWalk.phase;
-        person(ctx, foot[0], foot[1], "client", anim, clientWalk.face, clientWalk.stepping && anim.on, clientWalk.pose);
+        person(ctx, foot[0], foot[1], "client", anim, clientWalk.face, clientWalk.stepping && anim.on, clientWalk.sit);
       });
     }
     add(catWalk.c + catWalk.r + 0.01, function () {
@@ -1027,9 +1054,8 @@
     var on = playing && !reducedQueryOff();
     return {
       on: on,
-      t: on ? tick : 0,
-      bob: on && (Math.floor(tick / 4) % 2 === 1),
-      blink: on && (tick % 24) > 21
+      t: clock,
+      blink: on && (clock % 3.6) < 0.12
     };
   }
 
@@ -1109,11 +1135,11 @@
   }
 
   function pokeCat() {
-    catMood = 48;
-    setBubble("cat", "Мяу!", 28);
+    catMood = 0.8;
+    setBubble("cat", "Мяу!", 2.4);
     setDayNote("Кот мяукнул. Можно кликнуть ещё.");
     var dash = pickCatSpot();
-    if (dash) catWalk.follow([[catWalk.c, catWalk.r], dash], "stand", 1, 12);
+    if (dash) catWalk.follow([[catWalk.c, catWalk.r], dash], "stand", 1, 1.6);
     paint();
   }
 
@@ -1132,23 +1158,37 @@
     if (repaintNow) paint();
   }
 
-  function loop() {
-    raf = 0;
-    if (!inView) return;
-    if (playing && !reducedQueryOff()) {
-      tick += 1;
-      if (tick % 8 === 0) tickDay();
-      paint();
+  function loop(ts) {
+    if (!inView || !(playing && !reducedQueryOff())) {
+      raf = 0;
+      lastTs = 0;
+      return;
     }
     raf = requestAnimationFrame(loop);
+    if (!lastTs) {
+      lastTs = ts;
+      paint();
+      return;
+    }
+    var dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+    if (!(dt > 0)) dt = 0;
+    if (dt > MAX_DT) dt = MAX_DT;
+    tickDay(dt);
+    paint();
   }
 
   function applyVisibility() {
-    if (inView) {
-      if (!raf) raf = requestAnimationFrame(loop);
+    var should = inView && playing && !reducedQueryOff();
+    if (should) {
+      if (!raf) {
+        lastTs = 0;
+        raf = requestAnimationFrame(loop);
+      }
     } else if (raf) {
       cancelAnimationFrame(raf);
       raf = 0;
+      lastTs = 0;
     }
   }
 
@@ -1276,6 +1316,25 @@
       });
     },
     resolve: function (x, y) { return resolveHit(x, y); },
+    reset: function () { resetDayScene(); },
+    advance: function (dt) {
+      if (!(dt > 0)) return null;
+      if (dt > MAX_DT) dt = MAX_DT;
+      tickDay(dt);
+      function pack(w) {
+        return { c: w.c, r: w.r, sit: w.sit, pose: w.pose, face: w.face, busy: w.busy };
+      }
+      return {
+        act: dayAct,
+        note: dayNote,
+        clock: clock,
+        alex: pack(alexWalk),
+        igor: pack(igorWalk),
+        client: pack(clientWalk),
+        cat: pack(catWalk),
+        clientVisible: clientWalk.visible
+      };
+    },
     paths: function () {
       return { alex: pathProblem(ALEX_PATH), igor: pathProblem(IGOR_PATH) };
     },
@@ -1286,7 +1345,7 @@
         var bad = 0;
         var minC = w.c, maxC = w.c, minR = w.r, maxR = w.r;
         for (var i = 0; i < steps; i++) {
-          w.tick(true);
+          w.advance(1 / 60);
           if (blocked(w.c, w.r)) bad += 1;
           if (w.c < minC) minC = w.c;
           if (w.c > maxC) maxC = w.c;
