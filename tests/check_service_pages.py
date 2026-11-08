@@ -166,10 +166,10 @@ def main():
     home = (ROOT / "index.html").read_text(encoding="utf-8")
     main = home.split("<main", 1)[1].split("</main>", 1)[0]
     studio = ""
-    marker = '<section class="sec" id="studio">'
+    marker = 'id="studio"'
     if marker in main:
         studio = main.split(marker, 1)[1].split("</section>", 1)[0]
-    rest = main.replace(marker + studio + "</section>", "", 1) if studio else main
+    rest = main.replace(studio, "", 1) if studio else main
     if "automation.html" in rest or "bitrix.html" in rest:
         errors += fail("homepage main content links to the new pages outside the studio")
     if not studio:
