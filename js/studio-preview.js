@@ -411,9 +411,10 @@
     ctx.fillRect(x, y - 6, 1, 5);
   }
 
-  function person(ctx, x, y, who, anim, face, stepping) {
-    var bob = anim.on && !stepping && anim.bob ? 1 : 0;
-    var by = Math.round(y) - bob;
+  function person(ctx, x, y, who, anim, face, stepping, pose) {
+    var sit = pose === "sit";
+    var bob = anim.on && !stepping && !sit && anim.bob ? 1 : 0;
+    var by = Math.round(y) - bob + (sit ? 5 : 0);
     var dir = face < 0 ? -1 : 1;
     ctx.save();
     ctx.translate(Math.round(x), 0);
@@ -426,47 +427,53 @@
     var pants = who === "alex" ? "#1e1638" : "#1e1b4b";
     var hair = who === "alex" ? "#1a1028" : "#f0d7a4";
     ctx.fillStyle = "#120c18";
-    ctx.fillRect(bx - 7, by - 5, 5, 3);
-    ctx.fillRect(bx + 2, by - 5, 5, 3);
+    ctx.fillRect(bx - 7, by - (sit ? 3 : 5), 5, 3);
+    ctx.fillRect(bx + 2, by - (sit ? 3 : 5), 5, 3);
     var lift = stepping ? 2 : 0;
     var phase = stepping && anim.stepPhase ? 1 : 0;
     ctx.fillStyle = pants;
-    ctx.fillRect(bx - 7, by - 14 - (phase ? lift : 0), 5, 9 - (phase ? 1 : 0));
-    ctx.fillRect(bx + 2, by - 14 - (phase ? 0 : lift), 5, 9 - (phase ? 0 : 1));
+    if (sit) {
+      ctx.fillRect(bx - 7, by - 9, 5, 6);
+      ctx.fillRect(bx + 2, by - 9, 5, 6);
+    } else {
+      ctx.fillRect(bx - 7, by - 14 - (phase ? lift : 0), 5, 9 - (phase ? 1 : 0));
+      ctx.fillRect(bx + 2, by - 14 - (phase ? 0 : lift), 5, 9 - (phase ? 0 : 1));
+    }
     ctx.fillStyle = shirt;
-    ctx.fillRect(bx - 8, by - 27, 16, 13);
+    ctx.fillRect(bx - 8, by - (sit ? 22 : 27), 16, sit ? 12 : 13);
     ctx.fillStyle = shirtHi;
-    ctx.fillRect(bx - 7, by - 27, 14, 2);
+    ctx.fillRect(bx - 7, by - (sit ? 22 : 27), 14, 2);
     ctx.fillStyle = who === "alex" ? "#4c1d95" : "#e0e7ff";
-    ctx.fillRect(bx - 10, by - 25, 3, 9);
-    ctx.fillRect(bx + 7, by - 25, 3, 9);
+    var armPulse = sit && anim.on && (anim.t % 10 < 5) ? 1 : 0;
+    ctx.fillRect(bx - 10, by - (sit ? 20 : 25) + armPulse, 3, sit ? 7 : 9);
+    ctx.fillRect(bx + 7, by - (sit ? 20 : 25), 3, sit ? 7 : 9);
     ctx.fillStyle = "#f3c7a6";
-    ctx.fillRect(bx - 5, by - 38, 10, 11);
+    ctx.fillRect(bx - 5, by - (sit ? 33 : 38), 10, 11);
     ctx.fillStyle = hair;
-    ctx.fillRect(bx - 6, by - 42, 12, 6);
-    ctx.fillRect(bx - 6, by - 38, 2, who === "alex" ? 7 : 3);
-    ctx.fillRect(bx + 4, by - 38, 2, who === "alex" ? 4 : 3);
+    ctx.fillRect(bx - 6, by - (sit ? 37 : 42), 12, 6);
+    ctx.fillRect(bx - 6, by - (sit ? 33 : 38), 2, who === "alex" ? 7 : 3);
+    ctx.fillRect(bx + 4, by - (sit ? 33 : 38), 2, who === "alex" ? 4 : 3);
     if (who === "igor") {
       ctx.fillStyle = "#d6b48a";
-      ctx.fillRect(bx - 4, by - 30, 8, 2);
+      ctx.fillRect(bx - 4, by - (sit ? 25 : 30), 8, 2);
     }
     if (!anim.blink) {
       ctx.fillStyle = "#140c18";
-      ctx.fillRect(bx - 3, by - 34, 2, 2);
-      ctx.fillRect(bx + 2, by - 34, 2, 2);
+      ctx.fillRect(bx - 3, by - (sit ? 29 : 34), 2, 2);
+      ctx.fillRect(bx + 2, by - (sit ? 29 : 34), 2, 2);
       if (who === "igor") {
         ctx.fillStyle = "#67e8f9";
-        ctx.fillRect(bx - 4, by - 34, 4, 1);
-        ctx.fillRect(bx + 1, by - 34, 4, 1);
+        ctx.fillRect(bx - 4, by - (sit ? 29 : 34), 4, 1);
+        ctx.fillRect(bx + 1, by - (sit ? 29 : 34), 4, 1);
       }
     } else {
       ctx.fillStyle = "#e7b89a";
-      ctx.fillRect(bx - 3, by - 33, 2, 1);
-      ctx.fillRect(bx + 2, by - 33, 2, 1);
+      ctx.fillRect(bx - 3, by - (sit ? 28 : 33), 2, 1);
+      ctx.fillRect(bx + 2, by - (sit ? 28 : 33), 2, 1);
     }
     ctx.restore();
-    anchors.push({ id: who, x: Math.round(x), y: by - 46 });
-    actorHits.push({ id: who, x: Math.round(x) - 16, y: by - 48, w: 32, h: 52 });
+    anchors.push({ id: who, x: Math.round(x), y: by - (sit ? 40 : 46) });
+    actorHits.push({ id: who, x: Math.round(x) - 16, y: by - (sit ? 42 : 48), w: 32, h: sit ? 46 : 52 });
   }
 
   function cat(ctx, x, y, anim) {
@@ -540,52 +547,117 @@
     return null;
   }
 
-  function Walker(path) {
-    this.path = path;
-    this.i = 0;
-    this.c = path[0][0];
-    this.r = path[0][1];
-    this.pause = 10;
-    this.face = 1;
+  function Actor(c, r, face) {
+    this.c = c;
+    this.r = r;
+    this.face = face || 1;
     this.stepping = false;
     this.phase = 0;
     this.moved = 0;
+    this.pose = "stand";
+    this.pause = 0;
+    this.path = null;
+    this.i = 0;
+    this.holdLeft = 0;
+    this.busy = false;
+    this.endPose = "stand";
+    this.endFace = this.face;
   }
 
-  Walker.prototype.tick = function (on) {
+  Actor.prototype.hold = function (c, r, face, pose, ticks) {
+    this.path = null;
+    this.c = c;
+    this.r = r;
+    this.face = face;
+    this.pose = pose || "stand";
     this.stepping = false;
-    if (!on) return;
-    if (this.pause > 0) {
-      this.pause -= 1;
-      return;
-    }
-    var next = this.path[(this.i + 1) % this.path.length];
-    var dc = next[0] - this.c;
-    var dr = next[1] - this.r;
-    var dist = Math.sqrt(dc * dc + dr * dr);
-    if (dist < 0.045) {
-      this.c = next[0];
-      this.r = next[1];
-      this.i = (this.i + 1) % this.path.length;
-      this.pause = this.i % 3 === 0 ? 18 : 7;
-      return;
-    }
-    var step = Math.min(0.05, dist);
-    var nc = this.c + (dc / dist) * step;
-    var nr = this.r + (dr / dist) * step;
-    if (blocked(nc, nr)) {
-      this.pause = 12;
-      return;
-    }
-    this.c = nc;
-    this.r = nr;
-    this.moved += step;
-    this.stepping = true;
-    this.phase = Math.floor(this.moved / 0.1) % 2;
-    this.face = (dc - dr) >= 0 ? 1 : -1;
+    this.holdLeft = Math.max(1, ticks || 1);
+    this.busy = true;
   };
 
+  Actor.prototype.follow = function (path, endPose, endFace, holdTicks) {
+    var route = path.slice();
+    if (!route.length) {
+      this.hold(this.c, this.r, endFace != null ? endFace : this.face, endPose || "stand", holdTicks || 1);
+      return;
+    }
+    if (Math.sqrt(Math.pow(route[0][0] - this.c, 2) + Math.pow(route[0][1] - this.r, 2)) > 0.12) {
+      route.unshift([this.c, this.r]);
+    }
+    this.path = route;
+    this.i = 0;
+    this.pause = 0;
+    this.pose = "stand";
+    this.endPose = endPose || "stand";
+    this.endFace = endFace != null ? endFace : this.face;
+    this.holdLeft = Math.max(0, holdTicks || 0);
+    this.busy = true;
+  };
+
+  Actor.prototype.ready = function () {
+    return !this.busy;
+  };
+
+  Actor.prototype.tick = function (on) {
+    this.stepping = false;
+    if (!on) return;
+    if (this.path) {
+      if (this.pause > 0) {
+        this.pause -= 1;
+        return;
+      }
+      if (this.i >= this.path.length - 1) {
+        var last = this.path[this.path.length - 1];
+        this.c = last[0];
+        this.r = last[1];
+        this.path = null;
+        this.pose = this.endPose;
+        this.face = this.endFace;
+        if (this.holdLeft <= 0) this.busy = false;
+        return;
+      }
+      var next = this.path[this.i + 1];
+      var dc = next[0] - this.c;
+      var dr = next[1] - this.r;
+      var dist = Math.sqrt(dc * dc + dr * dr);
+      if (dist < 0.045) {
+        this.c = next[0];
+        this.r = next[1];
+        this.i += 1;
+        this.pause = 3;
+        return;
+      }
+      var step = Math.min(0.055, dist);
+      var nc = this.c + (dc / dist) * step;
+      var nr = this.r + (dr / dist) * step;
+      if (blocked(nc, nr)) {
+        this.pause = 10;
+        return;
+      }
+      this.c = nc;
+      this.r = nr;
+      this.moved += step;
+      this.stepping = true;
+      this.phase = Math.floor(this.moved / 0.1) % 2;
+      this.face = (dc - dr) >= 0 ? 1 : -1;
+      return;
+    }
+    if (this.holdLeft > 0) {
+      this.holdLeft -= 1;
+      if (this.holdLeft <= 0) this.busy = false;
+    }
+  };
+
+  var ALEX_DESK = [3.35, 3.2];
+  var IGOR_DESK = [8.75, 3.2];
+  var COFFEE = [10.45, 2.15];
+  var MEET_A = [4.15, 3.95];
+  var MEET_I = [6.35, 3.95];
+  var PORT_A = [2.05, 4.85];
+  var PORT_I = [2.45, 7.35];
+
   var ALEX_PATH = [
+    ALEX_DESK,
     [4.45, 3.25],
     [6.35, 3.25],
     [6.35, 5.55],
@@ -595,9 +667,11 @@
     [2.05, 8.75],
     [2.05, 5.1],
     [2.05, 3.25],
-    [4.45, 3.25]
+    [4.45, 3.25],
+    ALEX_DESK
   ];
   var IGOR_PATH = [
+    IGOR_DESK,
     [9.75, 3.35],
     [10.45, 3.35],
     [10.45, 8.7],
@@ -605,14 +679,122 @@
     [8.7, 4.25],
     [6.45, 4.25],
     [6.45, 3.35],
-    [9.75, 3.35]
+    IGOR_DESK
   ];
-  var alexWalk = new Walker(ALEX_PATH);
-  var igorWalk = new Walker(IGOR_PATH);
-  igorWalk.i = 2;
-  igorWalk.c = IGOR_PATH[2][0];
-  igorWalk.r = IGOR_PATH[2][1];
-  igorWalk.pause = 4;
+
+  var HOLD_WORK = 72;
+  var HOLD_COFFEE = 36;
+  var HOLD_MEET = 56;
+  var HOLD_PORT = 48;
+
+  var alexWalk = new Actor(ALEX_DESK[0], ALEX_DESK[1], 1);
+  var igorWalk = new Actor(IGOR_DESK[0], IGOR_DESK[1], -1);
+  alexWalk.pose = "sit";
+  igorWalk.pose = "sit";
+
+  var dayNote = "За столами: Алексей смотрит аналитику, Игорь верстает.";
+  var dayAct = -1;
+  var dayActs = [
+    {
+      note: "За столами: Алексей смотрит аналитику, Игорь верстает.",
+      run: function () {
+        alexWalk.follow([ALEX_DESK], "sit", 1, HOLD_WORK);
+        igorWalk.follow([IGOR_DESK], "sit", -1, HOLD_WORK);
+      }
+    },
+    {
+      note: "Алексей идёт за кофе. Игорь продолжает вёрстку.",
+      run: function () {
+        alexWalk.follow([
+          ALEX_DESK,
+          [2.05, 3.4],
+          [2.05, 8.7],
+          [10.4, 8.7],
+          [10.45, 2.2],
+          COFFEE
+        ], "stand", 1, HOLD_COFFEE);
+        igorWalk.hold(IGOR_DESK[0], IGOR_DESK[1], -1, "sit", 1);
+      }
+    },
+    {
+      note: "Короткий разбор у стола — что делаем дальше.",
+      run: function () {
+        alexWalk.follow([
+          COFFEE,
+          [10.4, 8.7],
+          [2.05, 8.7],
+          [2.05, 3.95],
+          MEET_A
+        ], "stand", 1, HOLD_MEET);
+        igorWalk.follow([
+          IGOR_DESK,
+          [6.35, 3.3],
+          MEET_I
+        ], "stand", -1, HOLD_MEET);
+      }
+    },
+    {
+      note: "Смотрят экран с работами — выбирают кейс для клиента.",
+      run: function () {
+        alexWalk.follow([
+          MEET_A,
+          [2.05, 3.95],
+          PORT_A
+        ], "stand", -1, HOLD_PORT);
+        igorWalk.follow([
+          MEET_I,
+          [8.55, 3.95],
+          [8.55, 8.7],
+          [2.45, 8.7],
+          PORT_I
+        ], "stand", -1, HOLD_PORT);
+      }
+    },
+    {
+      note: "Снова за работу — от брифа до заявок.",
+      run: function () {
+        alexWalk.follow([
+          PORT_A,
+          [2.05, 3.3],
+          ALEX_DESK
+        ], "sit", 1, HOLD_WORK);
+        igorWalk.follow([
+          PORT_I,
+          [2.45, 8.7],
+          [8.55, 8.7],
+          [8.75, 3.4],
+          IGOR_DESK
+        ], "sit", -1, HOLD_WORK);
+      }
+    }
+  ];
+
+  function setDayNote(text) {
+    dayNote = text;
+    var note = document.getElementById("motion-note");
+    var moving = playing && !reducedQueryOff();
+    if (note && moving) note.textContent = text + " Нажатие на любого открывает «О нас».";
+  }
+
+  function startDayAct(index) {
+    dayAct = ((index % dayActs.length) + dayActs.length) % dayActs.length;
+    var act = dayActs[dayAct];
+    setDayNote(act.note);
+    act.run();
+  }
+
+  function tickDay() {
+    if (!(playing && !reducedQueryOff())) return;
+    alexWalk.tick(true);
+    igorWalk.tick(true);
+    if (alexWalk.ready() && igorWalk.ready()) startDayAct(dayAct + 1);
+  }
+
+  function resetDayScene() {
+    alexWalk.hold(ALEX_DESK[0], ALEX_DESK[1], 1, "sit", 1);
+    igorWalk.hold(IGOR_DESK[0], IGOR_DESK[1], -1, "sit", 1);
+    startDayAct(0);
+  }
 
   function robot(ctx, x, y, anim) {
     var bob = anim.on ? (anim.t % 4 < 2 ? 2 : 0) : 0;
@@ -747,12 +929,12 @@
     add(alexWalk.c + alexWalk.r, function () {
       var foot = project(alexWalk.c, alexWalk.r, 0);
       anim.stepPhase = alexWalk.phase;
-      person(ctx, foot[0], foot[1], "alex", anim, alexWalk.face, alexWalk.stepping && anim.on);
+      person(ctx, foot[0], foot[1], "alex", anim, alexWalk.face, alexWalk.stepping && anim.on, alexWalk.pose);
     });
     add(igorWalk.c + igorWalk.r, function () {
       var foot = project(igorWalk.c, igorWalk.r, 0);
       anim.stepPhase = igorWalk.phase;
-      person(ctx, foot[0], foot[1], "igor", anim, igorWalk.face, igorWalk.stepping && anim.on);
+      person(ctx, foot[0], foot[1], "igor", anim, igorWalk.face, igorWalk.stepping && anim.on, igorWalk.pose);
     });
 
     items.sort(function (a, b) { return a.depth - b.depth; });
@@ -925,13 +1107,14 @@
             }
             if (game.canvas) game.canvas.tabIndex = -1;
             window.addEventListener("resize", placeLabels);
+            resetDayScene();
+            paint();
           },
           update: function () {
             if (!inView || !(playing && !reducedQueryOff())) return;
             tick += 1;
             if (tick % 8 === 0) {
-              alexWalk.tick(true);
-              igorWalk.tick(true);
+              tickDay();
               paint();
             }
           }
@@ -958,14 +1141,17 @@
       document.documentElement.dataset.motion = moving ? "on" : "off";
       if (note) {
         note.textContent = reduced && !playing
-          ? "В системе включено уменьшение движения, прогулка стоит. Кнопка её запускает. Ссылки работают."
-          : (moving ? "Алексей и Игорь ходят по студии. Нажатие на любого открывает «О нас»." : "Прогулка на паузе. Ссылки и нажатия работают.");
+          ? "В системе включено уменьшение движения, сцена стоит. Кнопка её запускает. Ссылки работают."
+          : (moving
+            ? (dayNote + " Нажатие на любого открывает «О нас».")
+            : "Сцена на паузе. Ссылки и нажатия работают.");
       }
     }
     if (pause) {
       pause.addEventListener("click", function () {
         playing = !playing;
         if (playing && reduced) reduced = false;
+        if (playing && dayAct < 0) resetDayScene();
         syncPause();
         paint();
       });
@@ -1012,7 +1198,8 @@
     },
     simulate: function (steps) {
       function run(path) {
-        var w = new Walker(path);
+        var w = new Actor(path[0][0], path[0][1], 1);
+        w.follow(path, "stand", 1, 0);
         var bad = 0;
         var minC = w.c, maxC = w.c, minR = w.r, maxR = w.r;
         for (var i = 0; i < steps; i++) {
@@ -1025,7 +1212,7 @@
         }
         return { bad: bad, minC: minC, maxC: maxC, minR: minR, maxR: maxR, c: w.c, r: w.r, i: w.i };
       }
-      return { alex: run(ALEX_PATH), igor: run(IGOR_PATH) };
+      return { alex: run(ALEX_PATH), igor: run(IGOR_PATH), note: dayNote, act: dayAct };
     }
   };
 })();
